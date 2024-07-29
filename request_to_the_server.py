@@ -81,7 +81,7 @@ with open('3_hanteo_token.json', 'r') as f_out:
 
 ######################################################## HANTEO SEND SALES DATA POST REQUEST ##############################################################################
 
-hanteo_sales_url = "https://test.example.com/v4/collect/realtimedata/ALBUM"
+hanteo_sales_url = "https://test.example.com"
 
 headers = {
     "Authorization": "Bearer " + hanteo_token_access,
@@ -158,7 +158,7 @@ for item in data:
                 "barcode": nested["ean"],
                 "salesVolume": int(nested["quantity"]),
                 "realTime": int(unix_timestamp_korea),
-                "opVal": nested["sku"] + "_" + str(unix_timestamp_korea) + "_" + "KaidoItalia",
+                "opVal": nested["sku"] + "_" + str(unix_timestamp_korea) + "_" + "uniqueCode",
             }
         ]
         response4 = requests.post(hanteo_sales_url, headers=headers, json=data2)
