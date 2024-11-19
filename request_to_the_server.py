@@ -10,7 +10,7 @@ from requests.exceptions import HTTPError
 
 ######################################################## THE GET REQUEST ##############################################################################
 
-api_url = "https://siteexample.com/wp-json/wc/v3/orders?consumer_key=ck_xxx&consumer_secret=cs_xxx&status=completed&per_page=100"
+api_url = "https://site_example.com/wp-json/wc/v3/orders?consumer_key=ck_xxx&consumer_secret=cs_xxx&status=completed&per_page=9"
 
 # Today's date
 today = date.today()
@@ -75,13 +75,13 @@ with open('1_response_get.json', 'r') as f:
 
 ######################################################## HANTEO AUTHORIZATION POST REQUEST ########################################################################
 
-with open('3_hanteo_token.json', 'r') as f_out:
-    hanteo_token_access = f_out.read()
+with open('3_file_to_read.json', 'r') as f_out:
+    site_token_access = f_out.read()
 
 
 ######################################################## HANTEO SEND SALES DATA POST REQUEST ##############################################################################
 
-hanteo_sales_url = "https://test.example.com"
+site_for_api_sales_url = "https://api.site_for_api.io/v4/collect/realtimedata/ALBUM"
 
 headers = {
     "Authorization": "Bearer " + hanteo_token_access,
@@ -91,7 +91,7 @@ headers = {
 # Our server timezone is GMT +00:00, so it's the same time as UTC time
 unix_timestamp_utc = int((datetime.now() - datetime(1970, 1, 1)).total_seconds())
 
-# From UTC to KTC there's a difference of plus 9 hours(= 32400s)
+# From UTC to KST there's a difference of plus 9 hours(= 32400s)
 unix_timestamp_korea = unix_timestamp_utc + 32400
 
 print("UTC Unix Time Stamp: ", unix_timestamp_utc)
@@ -107,10 +107,10 @@ data = json.load(f)
 ######################################################## TODO: In the future, write response of post one by one inside a file to make a one single post call with all the data, instead of doing a call every time ##############################################################################
 
 # Clearing post_data_hanteo.json file before writing inside
-#open('5_post_data_hanteo.json', 'w').close()
+#open('5_post_data_site_for_api.json', 'w').close()
 
 # Initialize the file to be a JSON array
-#with open("5_post_data_hanteo.json", "w") as f_out:
+#with open("5_post_data_site_for_api.json", "w") as f_out:
 #    f_out.write("[")
 #    f_out.flush()
 
@@ -118,8 +118,8 @@ data = json.load(f)
 #for item in data:
 #    for nested in item:
 #        data2 = {
-#            "familyCode": "youFamilyCode",
-#            "branchCode": "youBranchCode",
+#            "familyCode": "xxx",
+#            "branchCode": "xxx",
 #            "barcode": nested["ean"],
 #            "albumName": nested["name"],
 #            "salesVolume": int(nested["quantity"]),
@@ -127,47 +127,70 @@ data = json.load(f)
 #            "opVal": nested["sku"],
 #        }
 #        # With the "a" value, it appends the data instead of overwriting the file every time
-#        with open("5_post_data_hanteo.json", "a") as f_out:
+#        with open("5_post_data_site_for_api.json", "a") as f_out:
 #                f_out.write("" + json.dumps(data2) + ",")
 #                f_out.flush()
 
 # Delete the last "," character and closing the array with "]"
-#with open("5_post_data_hanteo.json", "rb+") as fh:
+#with open("5_post_data_site_for_api.json", "rb+") as fh:
 #    fh.seek(-1, 2)
 #    fh.truncate() 
     
-#with open("5_post_data_hanteo.json", "a") as f_out:
+#with open("5_post_data_site_for_api.json", "a") as f_out:
 #    f_out.write("]")
 #    f_out.flush()
 
-#json_data = open('5_post_data_hanteo.json','rb').read()
+#json_data = open('5_post_data_site_for_api.json','rb').read()
 #print("json data: ", json_data)
 
 
 #################################################################################### IDK if it's possible, for now I make a request for every iteration ##########################################################################################################
+# Clearing 5_post_request_response_with_eventual_errors.json file before writing inside
+open('5_post_request_response_with_eventual_errors.json', 'w').close()
 
-# It need to return a JSon Array so it needs to be [{ //data in here }, {//data in here}, ... ]
+# I have to add a counter because if I have two different orders but with the same albums and the same sku
+# the server returns an error
+count = 0
+
+# Initialize the file -> clear all the content inside
+with open("4_output_of_data2.json", "w") as f_out:
+    f_out.write("")
+
+# Loop into 2_filter_jq_get.json file to get all the data            
 for item in data:
     for nested in item:
-        data2 = [
-            {
-                ### Here we write the data request to the server 
-                "familyCode": "youFamilyCode",
-                "branchCode": "youBranchCode",
-                "albumName": nested["name"],
-                "barcode": nested["ean"],
-                "salesVolume": int(nested["quantity"]),
-                "realTime": int(unix_timestamp_korea),
-                "opVal": nested["sku"] + "_" + str(unix_timestamp_korea) + "_" + "uniqueCode",
-            }
-        ]
-        response4 = requests.post(hanteo_sales_url, headers=headers, json=data2)
-        
-with open("4_post_request_response_with_any_errors.json", "w") as f_out:
-    f_out.write("\nStatus Code: " + str(response4.status_code))
-    f_out.write("\n\nJSON Response: " + str(response4.json()))
-    f_out.flush()
 
+        # Check if ean is null
+        # The old method was: if it is, put an empty string
+        # Now I only do the response request if the ean is not null
+        if nested["ean"] is not None:
+            barcode = nested["ean"]
+            
+            # The data to be sent must be in json array form 
+            data2 = [
+                {
+                    "familyCode": "xxx",
+                    "branchCode": "xxx",
+                    "albumName": nested["name"],
+                    "barcode": barcode,
+                    "salesVolume": int(nested["quantity"]),
+                    "realTime": int(unix_timestamp_korea),
+                    "opVal": nested["sku"] + "_" + str(count) + "_" + str(today) + "_" + "KaidoItalia",
+                }
+            ]
+            
+            with open("4_output_of_data2.json", "a") as f_out:
+                f_out.write("data2: " + str(data2) + "\n")
+                
+            count = count + 1
+            response4 = requests.post(site_for_api_sales_url, headers=headers, json=data2)
+            
+            with open("5_post_request_response_with_eventual_errors.json", "a") as f_out:
+                f_out.write("\n- KST Unix Timestamp: " + str(unix_timestamp_korea))
+                f_out.write("\n- Status Code: " + str(response4.status_code))
+                f_out.write("\n\nJSON Response: " + str(response4.json()) + "\n")
+                f_out.flush()
+            
 # Closing the 2_filter_jq_get.json file
 f.close()
 
